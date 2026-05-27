@@ -37,10 +37,10 @@ export async function generateMetadata({
   if (!product) return {}
   return {
     title: product.name,
-    description: product.tagline,
+    description: product.tagline ?? undefined,
     openGraph: {
       title: product.name,
-      description: product.tagline,
+      description: product.tagline ?? undefined,
       type: 'website',
     },
   }
