@@ -1,0 +1,211 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===================================================
+ * Curious Geeks Design System — Tokens
+ * Font: Space Grotesk (sans + heading)
+ * Palette: Warm cream + Persimmon orange (oklch)
+ * =================================================== */
+:root {
+  /* Brand ramp (persimmon) */
+  --brand:              oklch(0.69 0.176 41);   /* ≈ #F26B3A */
+  --brand-foreground:   oklch(0.99 0.005 80);
+  --brand-50:           oklch(0.97 0.020 60);
+  --brand-100:          oklch(0.93 0.045 55);
+  --brand-200:          oklch(0.88 0.085 50);
+  --brand-300:          oklch(0.80 0.130 45);
+  --brand-400:          oklch(0.74 0.160 42);
+  --brand-500:          oklch(0.69 0.176 41);
+  --brand-600:          oklch(0.62 0.180 39);
+  --brand-700:          oklch(0.54 0.165 37);
+  --brand-800:          oklch(0.42 0.135 35);
+  --brand-900:          oklch(0.32 0.105 33);
+
+  /* Semantic surface tokens */
+  --background:         oklch(0.965 0.012 82);  /* warm cream */
+  --foreground:         oklch(0.18 0.005 60);   /* near-black, warm */
+  --card:               oklch(0.993 0.004 82);
+  --card-foreground:    var(--foreground);
+  --border:             oklch(0.90 0.018 82);
+  --muted:              oklch(0.94 0.014 82);
+  --muted-foreground:   oklch(0.48 0.012 65);
+  --accent:             oklch(0.93 0.030 75);
+  --accent-foreground:  oklch(0.30 0.06 40);
+  --primary:            var(--brand);
+  --primary-foreground: var(--brand-foreground);
+  --surface:            oklch(0.95 0.012 82);
+  --destructive:        oklch(0.577 0.245 27.325);
+  --ring:               var(--brand);
+
+  /* Font families */
+  --font-sans:    "Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono:    "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Radius scale */
+  --radius:    0.625rem;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+
+  /* Legacy aliases — keep pointing to new tokens */
+  --bg:     var(--background);
+  --text:   var(--foreground);
+}
+
+* { box-sizing: border-box; }
+
+html {
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--background);
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+}
+
+/* Noise grain overlay — fixed, never scrolling */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 128px 128px;
+}
+
+/* Prose styling for blog posts */
+.prose {
+  font-family: var(--font-sans);
+  color: #18181A;
+  line-height: 1.8;
+  max-width: 68ch;
+}
+.prose h1, .prose h2, .prose h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin-top: 2em;
+  margin-bottom: 0.5em;
+  color: #18181A;
+}
+.prose h2 { font-size: 1.75rem; }
+.prose h3 { font-size: 1.35rem; }
+.prose p { margin-bottom: 1.4em; }
+.prose a { color: #F26B3A; text-decoration: underline; text-underline-offset: 3px; }
+.prose blockquote {
+  border-left: 2px solid #E8E4DC;
+  padding-left: 1.5rem;
+  color: #8A8A85;
+  font-style: italic;
+  margin: 2em 0;
+}
+.prose ul, .prose ol { padding-left: 1.5rem; margin-bottom: 1.4em; }
+.prose li { margin-bottom: 0.4em; }
+.prose code {
+  font-family: var(--font-mono);
+  background: #F5F1E8;
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+/* Stagger animation utility */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 80ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 160ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 320ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 400ms; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ===================================================
+ * CG mascot — badge entrance (Jakub: opacity+translate+blur)
+ * animation-fill-mode: both prevents pre-delay flash
+ * =================================================== */
+@keyframes badgeIn {
+  from { opacity: 0; transform: translateY(6px) scale(0.9); filter: blur(4px); }
+  to   { opacity: 1; transform: translateY(0) scale(1);     filter: blur(0); }
+}
+
+.badge-c {
+  animation: badgeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.badge-g {
+  animation: badgeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 70ms;
+}
+
+/* ===================================================
+ * CG mascot — eye blink (Jhey: character animation)
+ * transform-box: fill-box so transform-origin is the
+ * circle's own center regardless of SVG coordinate space
+ * =================================================== */
+@keyframes blink {
+  0%, 87%, 100% { transform: scaleY(1); }
+  91%           { transform: scaleY(0.08); }
+  95%           { transform: scaleY(1); }
+}
+
+.cg-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blink 3.8s ease-in-out infinite;
+}
+.cg-eye-b { animation-delay: 90ms; }
+
+/* ===================================================
+ * Hero background orbs — atmospheric warm decoration
+ * ease-in-out loops smoothly because start/end velocity
+ * both reach zero at the shared transform value
+ * =================================================== */
+@keyframes orbFloat1 {
+  0%, 100% { transform: translate(0,    0)    scale(1); }
+  35%      { transform: translate(50px, -40px) scale(1.07); }
+  70%      { transform: translate(-30px, 28px) scale(0.96); }
+}
+
+@keyframes orbFloat2 {
+  0%, 100% { transform: translate(0,    0)    scale(1); }
+  30%      { transform: translate(-40px, 32px) scale(1.05); }
+  65%      { transform: translate(35px, -22px) scale(0.97); }
+}
+
+@keyframes orbFloat3 {
+  0%, 100% { transform: translate(0,    0); }
+  50%      { transform: translate(20px, -45px); }
+}
+
+.orb-1 { animation: orbFloat1 18s ease-in-out infinite; }
+.orb-2 { animation: orbFloat2 24s ease-in-out infinite; animation-delay: -10s; }
+.orb-3 { animation: orbFloat3 30s ease-in-out infinite; animation-delay: -15s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .stagger-children > * {
+    opacity: 1;
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
