@@ -1,21 +1,24 @@
 import Link from 'next/link'
 import { ArrowUpRight } from '@phosphor-icons/react/dist/ssr'
 import { sql } from '@/lib/db'
-import type { Product } from '@/lib/types'
+import type { ProductWithStats } from '@/lib/types'
 import { getAllPosts } from '@/lib/posts'
 import ProductCard from '@/components/ProductCard'
 import BlogCard from '@/components/BlogCard'
 
 export const revalidate = 60
 
-async function getRecentProducts(): Promise<Product[]> {
+async function getRecentProducts(): Promise<ProductWithStats[]> {
   const rows = await sql`
-    select * from products
-    where approved = true
-    order by created_at desc
+    select p.*,
+      (select count(*) from product_likes pl where pl.product_slug = p.slug)::int as like_count,
+      (select round(avg(c.rating)::numeric, 1) from comments c where c.product_slug = p.slug and c.rating is not null) as avg_rating
+    from products p
+    where p.approved = true
+    order by p.created_at desc
     limit 6
   `
-  return rows as Product[]
+  return rows as ProductWithStats[]
 }
 
 async function getMemberCount(): Promise<number> {

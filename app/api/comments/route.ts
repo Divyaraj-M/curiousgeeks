@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const session = await getSession()
   if (!session) {
-    return NextResponse.json({ error: 'Sign in to comment' }, { status: 401 })
+    return NextResponse.json({ error: 'Sign in to leave a review' }, { status: 401 })
   }
 
   // Verify still a member
@@ -31,18 +31,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Community members only' }, { status: 403 })
   }
 
-  const { productSlug, body } = await request.json() as { productSlug: string; body: string }
+  const { productSlug, body, rating } = await request.json() as { productSlug: string; body: string; rating: number }
 
   if (!productSlug?.trim()) {
     return NextResponse.json({ error: 'Product slug required' }, { status: 400 })
   }
   if (!body?.trim()) {
-    return NextResponse.json({ error: 'Comment cannot be empty' }, { status: 400 })
+    return NextResponse.json({ error: 'Review cannot be empty' }, { status: 400 })
+  }
+  if (!rating || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return NextResponse.json({ error: 'A star rating (1–5) is required' }, { status: 400 })
   }
 
   const rows = await sql`
-    insert into comments (product_slug, author_name, author_email, body)
-    values (${productSlug}, ${session.name}, ${session.email}, ${body.trim()})
+    insert into comments (product_slug, author_name, author_email, body, rating)
+    values (${productSlug}, ${session.name}, ${session.email}, ${body.trim()}, ${rating})
     returning *
   `
 

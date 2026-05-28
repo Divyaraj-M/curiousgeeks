@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ArrowUpRight } from '@phosphor-icons/react/dist/ssr'
 import { sql } from '@/lib/db'
-import type { Product } from '@/lib/types'
+import type { ProductWithStats } from '@/lib/types'
 import ProductCard from '@/components/ProductCard'
 
 export const revalidate = 60
@@ -14,20 +14,26 @@ export const metadata: Metadata = {
 
 const CATEGORIES = ['All', 'Tool', 'App', 'Resource', 'Library', 'Other']
 
-async function getProducts(category?: string): Promise<Product[]> {
+async function getProducts(category?: string): Promise<ProductWithStats[]> {
   const rows =
     category && category !== 'All'
       ? await sql`
-          select * from products
-          where approved = true and category = ${category}
-          order by created_at desc
+          select p.*,
+            (select count(*) from product_likes pl where pl.product_slug = p.slug)::int as like_count,
+            (select round(avg(c.rating)::numeric, 1) from comments c where c.product_slug = p.slug and c.rating is not null) as avg_rating
+          from products p
+          where p.approved = true and p.category = ${category}
+          order by p.created_at desc
         `
       : await sql`
-          select * from products
-          where approved = true
-          order by created_at desc
+          select p.*,
+            (select count(*) from product_likes pl where pl.product_slug = p.slug)::int as like_count,
+            (select round(avg(c.rating)::numeric, 1) from comments c where c.product_slug = p.slug and c.rating is not null) as avg_rating
+          from products p
+          where p.approved = true
+          order by p.created_at desc
         `
-  return rows as Product[]
+  return rows as ProductWithStats[]
 }
 
 export default async function ProductsPage({

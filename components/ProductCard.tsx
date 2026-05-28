@@ -1,9 +1,9 @@
 import Link from 'next/link'
-import { ArrowUpRight } from '@phosphor-icons/react/dist/ssr'
-import type { Product } from '@/lib/types'
+import { ArrowUpRight, Heart, Star } from '@phosphor-icons/react/dist/ssr'
+import type { ProductWithStats } from '@/lib/types'
 
 export default function ProductCard({ product, size = 'default' }: {
-  product: Product
+  product: ProductWithStats
   size?: 'default' | 'featured'
 }) {
   return (
@@ -39,9 +39,25 @@ export default function ProductCard({ product, size = 'default' }: {
 
           {/* Footer */}
           <div className="flex items-center justify-between mt-6">
-            <span className="text-xs text-[#8A8A85]">
-              by {product.maker_name}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-[#8A8A85]">
+                by {product.maker_name}
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs text-[#8A8A85]">
+                <Heart
+                  size={12}
+                  weight={product.like_count > 0 ? 'fill' : 'regular'}
+                  style={{ color: product.like_count > 0 ? '#F26B3A' : '#C0BDB5' }}
+                />
+                {product.like_count}
+              </span>
+              {product.avg_rating != null && (
+                <span className="inline-flex items-center gap-1 text-xs text-[#8A8A85]">
+                  <Star size={12} weight="fill" style={{ color: '#F26B3A' }} />
+                  {Number(product.avg_rating).toFixed(1)}
+                </span>
+              )}
+            </div>
             <span className="
               w-8 h-8 rounded-full bg-[#F5F1E8] flex items-center justify-center
               group-hover:bg-[#18181A] group-hover:text-white

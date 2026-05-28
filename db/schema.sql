@@ -63,3 +63,18 @@ create index if not exists idx_products_created on products(created_at desc);
 create index if not exists idx_comments_product on comments(product_slug);
 create index if not exists idx_members_email    on members(email);
 create index if not exists idx_otps_email       on otps(email);
+
+-- Product likes (added after initial schema)
+create table if not exists product_likes (
+  id           uuid default uuid_generate_v4() primary key,
+  product_slug text not null references products(slug) on delete cascade,
+  member_email text not null references members(email) on delete cascade,
+  created_at   timestamp with time zone default now(),
+  constraint product_likes_unique unique (product_slug, member_email)
+);
+create index if not exists idx_product_likes_slug  on product_likes(product_slug);
+create index if not exists idx_product_likes_email on product_likes(member_email);
+
+-- Review ratings on comments (added after initial schema)
+alter table comments
+  add column if not exists rating smallint check (rating >= 1 and rating <= 5);

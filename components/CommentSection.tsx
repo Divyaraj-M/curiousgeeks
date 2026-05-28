@@ -3,6 +3,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import type { Comment } from '@/lib/types'
 import type { SessionPayload } from '@/lib/auth'
+import StarRating from '@/components/StarRating'
 
 function Avatar({ name }: { name: string }) {
   const initials = name
@@ -34,6 +35,11 @@ function CommentItem({ comment }: { comment: Comment }) {
           <span className="text-sm font-medium text-[#18181A]">{comment.author_name}</span>
           <time className="text-xs text-[#8A8A85]">{formattedDate}</time>
         </div>
+        {comment.rating != null && (
+          <div className="mb-1.5">
+            <StarRating mode="display" value={comment.rating} size="sm" />
+          </div>
+        )}
         <p className="text-sm text-[#3A3A3C] leading-relaxed">{comment.body}</p>
       </div>
     </div>
@@ -51,12 +57,13 @@ export default function CommentSection({
 }) {
   const [comments, setComments] = useState<Comment[]>(initialComments)
   const [body, setBody] = useState('')
+  const [rating, setRating] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!body.trim()) return
+    if (!body.trim() || rating === 0) return
     setLoading(true)
     setError('')
 
@@ -64,13 +71,14 @@ export default function CommentSection({
       const res = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productSlug, body }),
+        body: JSON.stringify({ productSlug, body, rating }),
       })
       const data = await res.json()
 
       if (data.comment) {
         setComments(prev => [...prev, data.comment as Comment])
         setBody('')
+        setRating(0)
       } else {
         setError(data.error ?? 'Something went wrong')
       }
@@ -85,7 +93,7 @@ export default function CommentSection({
     <section className="mt-16">
       <div className="flex items-center justify-between mb-6">
         <h2 className="font-serif text-2xl text-[#18181A] tracking-tight">
-          Comments
+          Reviews
           {comments.length > 0 && (
             <span className="ml-2 text-base font-normal text-[#8A8A85] font-sans">
               ({comments.length})
@@ -94,7 +102,7 @@ export default function CommentSection({
         </h2>
       </div>
 
-      {/* Comment form — members only */}
+      {/* Review form — members only */}
       {session ? (
         <form onSubmit={handleSubmit} className="mb-8">
           <div className="rounded-[1.25rem] border border-[#E8E4DC] bg-white overflow-hidden">
@@ -112,6 +120,12 @@ export default function CommentSection({
                 bg-transparent resize-none focus:outline-none
               "
             />
+            <div className="flex items-center gap-3 px-5 py-3 border-t border-[#E8E4DC]">
+              <StarRating mode="input" value={rating} onChange={setRating} />
+              {rating === 0 && (
+                <span className="text-xs text-[#C0BDB5]">pick a rating</span>
+              )}
+            </div>
             <div className="flex items-center justify-between px-5 py-3 border-t border-[#E8E4DC]">
               {error ? (
                 <p className="text-xs text-red-500">{error}</p>
@@ -120,7 +134,7 @@ export default function CommentSection({
               )}
               <button
                 type="submit"
-                disabled={loading || !body.trim()}
+                disabled={loading || !body.trim() || rating === 0}
                 className="
                   flex items-center gap-1.5 text-sm font-medium
                   bg-[#18181A] text-[#FAFAF6] rounded-full px-4 py-2
@@ -128,7 +142,7 @@ export default function CommentSection({
                   transition-all duration-200
                 "
               >
-                {loading ? 'Posting…' : 'Post comment'}
+                {loading ? 'Posting…' : 'Post review'}
               </button>
             </div>
           </div>
@@ -136,7 +150,7 @@ export default function CommentSection({
       ) : (
         <div className="mb-8 rounded-[1.25rem] border border-[#E8E4DC] bg-[#F5F1E8] px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
           <p className="text-sm text-[#3A3A3C]">
-            Community members can leave comments.
+            Community members can leave reviews.
           </p>
           <div className="flex items-center gap-3">
             <Link
@@ -160,7 +174,7 @@ export default function CommentSection({
         </div>
       )}
 
-      {/* Comments list */}
+      {/* Reviews list */}
       <div className="rounded-[1.25rem] bg-white border border-[#E8E4DC] overflow-hidden">
         {comments.length === 0 ? (
           <div className="py-12 flex flex-col items-center text-center">
@@ -169,7 +183,7 @@ export default function CommentSection({
                 <path d="M10 2C5.582 2 2 5.134 2 9c0 1.89.832 3.604 2.18 4.86L3 17l4.27-1.27A8.54 8.54 0 0010 16c4.418 0 8-3.134 8-7s-3.582-7-8-7z" stroke="#F26B3A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <p className="text-sm font-medium text-[#18181A] mb-1">No comments yet</p>
+            <p className="text-sm font-medium text-[#18181A] mb-1">No reviews yet</p>
             <p className="text-xs text-[#8A8A85]">Be the first to share your thoughts.</p>
           </div>
         ) : (

@@ -6,6 +6,8 @@ import { sql } from '@/lib/db'
 import { getSession } from '@/lib/auth'
 import type { Product, Comment } from '@/lib/types'
 import CommentSection from '@/components/CommentSection'
+import LikeButton from '@/components/LikeButton'
+import StarRating from '@/components/StarRating'
 
 export const revalidate = 60
 
@@ -25,6 +27,30 @@ async function getComments(slug: string): Promise<Comment[]> {
     order by created_at asc
   `
   return rows as Comment[]
+}
+
+async function getLikeCount(slug: string): Promise<number> {
+  const rows = await sql`select count(*) as count from product_likes where product_slug = ${slug}`
+  return Number(rows[0].count)
+}
+
+async function getUserLiked(slug: string, email: string): Promise<boolean> {
+  const rows = await sql`
+    select 1 from product_likes
+    where product_slug = ${slug} and member_email = ${email}
+    limit 1
+  `
+  return rows.length > 0
+}
+
+async function getAvgRating(slug: string): Promise<number | null> {
+  const rows = await sql`
+    select round(avg(rating)::numeric, 1) as avg
+    from comments
+    where product_slug = ${slug} and rating is not null
+  `
+  const val = rows[0]?.avg
+  return val != null ? Number(val) : null
 }
 
 export async function generateMetadata({
@@ -54,10 +80,14 @@ export default async function ProductPage({
   const { slug } = await params
   const product = await getProduct(slug)
   if (!product) notFound()
-  const [initialComments, session] = await Promise.all([
+
+  const [initialComments, session, likeCount, avgRating] = await Promise.all([
     getComments(slug),
     getSession(),
+    getLikeCount(slug),
+    getAvgRating(slug),
   ])
+  const userLiked = session ? await getUserLiked(slug, session.email) : false
 
   const formattedDate = new Date(product.created_at).toLocaleDateString('en-US', {
     month: 'long',
@@ -96,9 +126,17 @@ export default async function ProductPage({
             </h1>
 
             {/* Tagline */}
-            <p className="text-xl text-[#8A8A85] leading-relaxed mb-8">
+            <p className="text-xl text-[#8A8A85] leading-relaxed mb-4">
               {product.tagline}
             </p>
+
+            {/* Avg rating */}
+            {avgRating !== null && (
+              <div className="flex items-center gap-2 mb-6">
+                <StarRating mode="display" value={avgRating} size="md" />
+                <span className="text-xs text-[#8A8A85]">{avgRating.toFixed(1)} avg</span>
+              </div>
+            )}
 
             {/* Description */}
             {product.description && (
@@ -109,8 +147,16 @@ export default async function ProductPage({
 
             {/* Footer row */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-6 border-t border-[#E8E4DC]">
-              <div className="text-sm text-[#8A8A85]">
-                Made by <span className="text-[#18181A] font-medium">{product.maker_name}</span>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-[#8A8A85]">
+                  Made by <span className="text-[#18181A] font-medium">{product.maker_name}</span>
+                </div>
+                <LikeButton
+                  productSlug={slug}
+                  initialCount={likeCount}
+                  initialLiked={userLiked}
+                  session={session}
+                />
               </div>
 
               {product.url && (
@@ -151,7 +197,7 @@ export default async function ProductPage({
           </div>
         )}
 
-        {/* Comment section */}
+        {/* Reviews section */}
         <CommentSection
           productSlug={slug}
           initialComments={initialComments}

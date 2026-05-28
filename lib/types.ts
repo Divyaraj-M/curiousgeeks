@@ -26,7 +26,13 @@ export type Comment = {
   author_name: string
   author_email: string
   body: string
+  rating: number | null
   created_at: string
+}
+
+export type ProductWithStats = Product & {
+  like_count: number
+  avg_rating: number | null
 }
 
 export type PostMeta = {
