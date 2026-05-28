@@ -119,6 +119,7 @@ create table if not exists products (
 ```
 
 ### `comments`
+`rating` is nullable — old comments have `NULL`, new reviews require 1–5.
 ```sql
 create table if not exists comments (
   id           uuid default uuid_generate_v4() primary key,
@@ -126,7 +127,20 @@ create table if not exists comments (
   author_name  text not null,
   author_email text not null,
   body         text not null,
+  rating       smallint check (rating >= 1 and rating <= 5),   -- added; nullable for old rows
   created_at   timestamptz default now()
+);
+```
+
+### `product_likes`
+One row per member per product. UNIQUE constraint enforces the toggle at DB level.
+```sql
+create table if not exists product_likes (
+  id           uuid default uuid_generate_v4() primary key,
+  product_slug text not null references products(slug) on delete cascade,
+  member_email text not null references members(email) on delete cascade,
+  created_at   timestamptz default now(),
+  constraint product_likes_unique unique (product_slug, member_email)
 );
 ```
 
@@ -199,8 +213,8 @@ Admin is identified purely by email match: `session.email === 'divyaraj.murugan@
 │   ├── privacy/page.tsx            Privacy policy — static page
 │   │
 │   ├── products/
-│   │   ├── page.tsx                Products listing
-│   │   ├── [slug]/page.tsx         Product detail — comments section, session-aware
+│   │   ├── page.tsx                Products listing — queries ProductWithStats (like_count + avg_rating subqueries)
+│   │   ├── [slug]/page.tsx         Product detail — LikeButton, avg rating display, reviews section
 │   │   └── submit/page.tsx         Submit product form — auth-gated (middleware + API)
 │   │
 │   └── api/
@@ -218,10 +232,12 @@ Admin is identified purely by email match: `session.email === 'divyaraj.murugan@
 │       │   └── join/route.ts       POST { firstName, lastName, email, password } → send OTP
 │       │
 │       ├── products/
-│       │   └── submit/route.ts     POST product data → insert (auth-gated)
+│       │   ├── submit/route.ts     POST product data → insert (auth-gated)
+│       │   └── [slug]/
+│       │       └── like/route.ts   POST → toggle like; returns { liked, count }
 │       │
 │       ├── comments/
-│       │   └── route.ts            GET ?productSlug= | POST { productSlug, body } (auth-gated)
+│       │   └── route.ts            GET ?productSlug= | POST { productSlug, body, rating } (auth-gated)
 │       │
 │       └── blog/
 │           ├── route.ts            POST (create) | PATCH (update) — admin only
@@ -230,8 +246,10 @@ Admin is identified purely by email match: `session.email === 'divyaraj.murugan@
 ├── components/
 │   ├── Nav.tsx                     Client component — accepts session prop, shows UserAvatar if logged in
 │   ├── NavWrapper.tsx              Server component — reads cookie, passes session to Nav
-│   ├── CommentSection.tsx          Client component — inline comment form or sign-in prompt
-│   ├── ProductCard.tsx             Product card UI
+│   ├── CommentSection.tsx          Client component — review form (stars required) or sign-in prompt
+│   ├── StarRating.tsx              Client component — dual-mode: display (5 filled stars) or input (interactive picker)
+│   ├── LikeButton.tsx              Client component — heart toggle with optimistic update; display-only if no session
+│   ├── ProductCard.tsx             Product card UI — shows like count + avg rating in footer
 │   ├── BlogCard.tsx                Blog card UI
 │   └── Footer.tsx                  Footer with Privacy Policy link
 │
@@ -240,7 +258,7 @@ Admin is identified purely by email match: `session.email === 'divyaraj.murugan@
 │   ├── db.ts                       Neon sql tagged-template export
 │   ├── email.ts                    sendWelcomeEmail, sendOtpEmail, sendPasswordResetEmail, sendSignupOtpEmail
 │   ├── posts.ts                    getAllPosts (fs+db), getPostBySlug (fs+db), getAllPostsAdmin, getPostBySlugAdmin, ADMIN_EMAIL
-│   └── types.ts                    PostMeta, Product, Comment TypeScript types
+│   └── types.ts                    PostMeta, Product, ProductWithStats, Comment TypeScript types
 │
 ├── content/
 │   └── blog/                       Markdown files — slug = filename. Read at build/request time via fs
@@ -267,8 +285,9 @@ Admin is identified purely by email match: `session.email === 'divyaraj.murugan@
 | GET | `/api/auth/me` | Cookie | Return `{ email, name }` or 401 |
 | POST | `/api/auth/forgot-password` | None | Send reset email (always returns ok) |
 | POST | `/api/auth/reset-password` | None | Validate token, update password |
-| GET | `/api/comments?productSlug=` | None | Fetch comments for a product |
-| POST | `/api/comments` | Cookie (member) | Post comment |
+| GET | `/api/comments?productSlug=` | None | Fetch reviews for a product |
+| POST | `/api/comments` | Cookie (member) | Post review — body `{ productSlug, body, rating }`, rating 1–5 required |
+| POST | `/api/products/[slug]/like` | Cookie (member) | Toggle like — returns `{ liked: boolean, count: number }` |
 | POST | `/api/products/submit` | Cookie (member) | Submit product |
 | POST | `/api/blog` | Cookie (admin) | Create blog post |
 | PATCH | `/api/blog` | Cookie (admin) | Update blog post |
@@ -326,6 +345,15 @@ import '@uiw/react-md-editor/markdown-editor.css'
 import '@uiw/react-markdown-preview/markdown.css'
 ```
 Wrap the editor div with `data-color-mode="light"` to prevent dark mode flash.
+
+### `ProductWithStats` vs `Product`
+`ProductCard` and any query that returns products for listing must use `ProductWithStats` (extends `Product` with `like_count: number` and `avg_rating: number | null`). This applies to `app/products/page.tsx` and `app/page.tsx`. The `app/products/[slug]/page.tsx` detail page still uses plain `Product` for the single-product fetch — like data is fetched separately.
+
+### Like toggle is a POST, not PUT/DELETE
+`POST /api/products/[slug]/like` handles both directions — it reads the existing row and either inserts or deletes. The `on conflict do nothing` clause on insert guards against race conditions. The UNIQUE constraint `(product_slug, member_email)` enforces one like per member at the DB level.
+
+### Star rating is required for new reviews, nullable for old
+`comments.rating` is `SMALLINT NULL`. The API enforces `1 ≤ rating ≤ 5` for new submissions. Old comments (pre-feature) have `rating = NULL` and display without a star row in `CommentItem` — no migration needed.
 
 ### `calc()` in Tailwind
 Use underscores for spaces inside `calc()`: `rounded-[calc(1.75rem_-_6px)]` not `calc(1.75rem-6px)`.
