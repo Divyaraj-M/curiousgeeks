@@ -11,6 +11,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "@phosphor-icons/react": "^2.1.7",
+    "@uiw/react-md-editor": "^4.1.1",
     "bcryptjs": "^3.0.3",
     "framer-motion": "^11.2.10",
     "gray-matter": "^4.0.3",
@@ -19,7 +20,8 @@
     "next-mdx-remote": "^6.0.0",
     "nodemailer": "^8.0.9",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "react-markdown": "^10.1.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
