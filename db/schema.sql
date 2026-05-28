@@ -78,3 +78,14 @@ create index if not exists idx_product_likes_email on product_likes(member_email
 -- Review ratings on comments (added after initial schema)
 alter table comments
   add column if not exists rating smallint check (rating >= 1 and rating <= 5);
+
+-- Blog post comments / discussion (added after initial schema)
+create table if not exists blog_comments (
+  id           uuid default uuid_generate_v4() primary key,
+  post_slug    text not null,
+  author_name  text not null,
+  author_email text not null,
+  body         text not null,
+  created_at   timestamptz default now()
+);
+create index if not exists idx_blog_comments_slug on blog_comments(post_slug);

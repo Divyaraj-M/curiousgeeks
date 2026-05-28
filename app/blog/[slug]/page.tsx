@@ -5,9 +5,11 @@ import { MDXRemote } from 'next-mdx-remote/rsc'
 import { ArrowLeft, PencilSimple } from '@phosphor-icons/react/dist/ssr'
 import { getAllPosts, getPostBySlug, ADMIN_EMAIL } from '@/lib/posts'
 import { getSession } from '@/lib/auth'
+import { sql } from '@/lib/db'
 import type { PostMeta } from '@/lib/types'
 import TableOfContents, { type Heading } from '@/components/TableOfContents'
 import BlogCard from '@/components/BlogCard'
+import BlogCommentSection from '@/components/BlogCommentSection'
 
 export const revalidate = 60
 
@@ -42,17 +44,13 @@ export async function generateMetadata({
   }
 }
 
-// Converts heading children (string or React node) to a URL-safe ID
 function headingId(children: React.ReactNode): string {
   const text = Array.isArray(children)
     ? children.map(c => (typeof c === 'string' ? c : '')).join('')
-    : typeof children === 'string'
-    ? children
-    : ''
+    : typeof children === 'string' ? children : ''
   return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
-// Custom MDX components — adds IDs to h1/h2/h3 so TOC links scroll to them
 const mdxComponents = {
   h1: ({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h1 id={headingId(children)} className="scroll-mt-24" {...props}>{children}</h1>
@@ -65,7 +63,6 @@ const mdxComponents = {
   ),
 }
 
-// Extract headings from raw markdown for the TOC
 function extractHeadings(content: string): Heading[] {
   return content
     .split('\n')
@@ -81,7 +78,6 @@ function extractHeadings(content: string): Heading[] {
     .filter((h): h is Heading => h !== null)
 }
 
-// Related posts: shared tags only, sorted by overlap count, max 5
 function getRelatedPosts(allPosts: PostMeta[], current: PostMeta): PostMeta[] {
   const currentTags = new Set(current.tags)
   if (!currentTags.size) return []
@@ -107,11 +103,19 @@ export default async function BlogPostPage({
   ])
   if (!post) notFound()
 
+  const blogCommentsRows = await sql`
+    select * from blog_comments where post_slug = ${slug} order by created_at asc
+  `
+  const initialComments = blogCommentsRows as {
+    id: string; post_slug: string; author_name: string;
+    author_email: string; body: string; created_at: string
+  }[]
+
   const isAdmin = session?.email === ADMIN_EMAIL
   const headings = extractHeadings(post.content)
   const relatedPosts = getRelatedPosts(allPosts, post.meta)
+  const tags = post.meta.tags ?? []
 
-  // Parse YYYY-MM-DD in local time to avoid UTC midnight → previous day shifts
   const [y, m, d] = (post.meta.date || '').split('-').map(Number)
   const formattedDate = y
     ? new Date(y, m - 1, d).toLocaleDateString('en-US', {
@@ -147,9 +151,9 @@ export default async function BlogPostPage({
           <div>
             {/* Post header */}
             <div className="mb-12 stagger-children">
-              {post.meta.tags && post.meta.tags.length > 0 && (
+              {tags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6">
-                  {post.meta.tags.map(tag => (
+                  {tags.map(tag => (
                     <span key={tag} className="inline-block text-[10px] uppercase tracking-[0.15em] font-medium text-[#F26B3A] bg-[#F26B3A]/12 px-2.5 py-1 rounded-full">
                       {tag.replace(/-/g, ' ')}
                     </span>
@@ -198,6 +202,13 @@ export default async function BlogPostPage({
               </Link>
             </div>
 
+            {/* Discussion / comments */}
+            <BlogCommentSection
+              postSlug={slug}
+              initialComments={initialComments}
+              session={session}
+            />
+
             {/* Related articles */}
             {relatedPosts.length > 0 && (
               <section className="mt-16 pt-12 border-t border-[#E8E4DC]">
@@ -213,9 +224,55 @@ export default async function BlogPostPage({
             )}
           </div>
 
-          {/* Right — sticky TOC */}
+          {/* Right — sticky sidebar */}
           <aside className="hidden xl:block">
-            <TableOfContents headings={headings} />
+            <div className="sticky top-28 space-y-8">
+
+              {/* Table of contents */}
+              <TableOfContents headings={headings} />
+
+              {/* Tags */}
+              {tags.length > 0 && (
+                <div className={headings.length > 0 ? 'pt-8 border-t border-[#E8E4DC]' : ''}>
+                  <p className="text-[10px] uppercase tracking-[0.15em] font-medium text-[#8A8A85] mb-3">
+                    Tags
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.map(tag => (
+                      <span
+                        key={tag}
+                        className="inline-block text-[10px] uppercase tracking-[0.12em] font-medium text-[#F26B3A] bg-[#F26B3A]/10 px-2.5 py-1 rounded-full"
+                      >
+                        {tag.replace(/-/g, ' ')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Discussion widget */}
+              <div className="pt-8 border-t border-[#E8E4DC]">
+                <p className="text-[10px] uppercase tracking-[0.15em] font-medium text-[#8A8A85] mb-4">
+                  Discussion
+                </p>
+                <a
+                  href="#discussion"
+                  className="flex items-center gap-2.5 text-sm text-[#3A3A3C] hover:text-[#F26B3A] transition-colors duration-200 mb-3 group"
+                >
+                  <span className="w-7 h-7 rounded-full bg-[#F26B3A]/10 text-[#F26B3A] text-xs flex items-center justify-center font-semibold group-hover:bg-[#F26B3A] group-hover:text-white transition-colors duration-200">
+                    {initialComments.length}
+                  </span>
+                  {initialComments.length === 1 ? '1 comment' : `${initialComments.length} comments`}
+                </a>
+                <a
+                  href="#write-comment"
+                  className="text-xs font-medium text-[#F26B3A] hover:underline"
+                >
+                  Write a comment →
+                </a>
+              </div>
+
+            </div>
           </aside>
 
         </div>

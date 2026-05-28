@@ -453,3 +453,7 @@ git push origin main   # Vercel auto-deploys
 **2026-05-28** — Added sticky TOC sidebar and related articles to blog post pages — `TableOfContents` client component uses `IntersectionObserver` to highlight active heading. Custom `h1/h2/h3` MDX components add slug IDs. Related articles: posts sharing ≥1 tag with current post, sorted by overlap count, capped at 5. Layout is two-column on `xl:` screens.
 
 **2026-05-28** — Added favicon (`app/icon.svg`) — dark rounded-square with serif "G" in brand orange (`#F26B3A`).
+
+**2026-05-28** — Replaced favicon with actual CG mascot logo SVG — uses exact SVG paths from the nav component (orange C badge + cream G badge overlapping) on warm `#FAFAF6` background.
+
+**2026-05-28** — Added blog post comments (discussion) — `blog_comments` table, `GET/POST /api/blog-comments`, `BlogCommentSection` client component below each article. Sidebar shows discussion count pill + "Write a comment →" jump link. Tags shown as pills below TOC in sidebar.
