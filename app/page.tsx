@@ -18,10 +18,16 @@ async function getRecentProducts(): Promise<Product[]> {
   return rows as Product[]
 }
 
+async function getMemberCount(): Promise<number> {
+  const rows = await sql`select count(*) as count from members`
+  return Number(rows[0].count)
+}
+
 export default async function HomePage() {
-  const [products, allPosts] = await Promise.all([
+  const [products, allPosts, memberCount] = await Promise.all([
     getRecentProducts(),
     getAllPosts(),
+    getMemberCount(),
   ])
   const recentPosts = allPosts.slice(0, 3)
 
@@ -85,14 +91,21 @@ export default async function HomePage() {
 
           {/* Right: floating stat cards */}
           <div className="hidden md:flex flex-col gap-3 items-end">
-            {/* Stat card 1 */}
+            {/* Stat card 1 — Geeks */}
+            <div className="p-[5px] rounded-[1.25rem] bg-[#F26B3A]/10 border border-[#F26B3A]/20">
+              <div className="bg-white rounded-[calc(1.25rem_-_5px)] px-5 py-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)] min-w-[160px]">
+                <p className="text-3xl font-serif text-[#F26B3A] tracking-tight">{memberCount}</p>
+                <p className="text-xs text-[#8A8A85] mt-0.5 uppercase tracking-[0.12em] font-medium">Geeks so far</p>
+              </div>
+            </div>
+            {/* Stat card 2 — Products */}
             <div className="p-[5px] rounded-[1.25rem] bg-[#F5F1E8] border border-[#E8E4DC]">
               <div className="bg-white rounded-[calc(1.25rem_-_5px)] px-5 py-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)] min-w-[160px]">
                 <p className="text-3xl font-serif text-[#18181A] tracking-tight">{products.length}+</p>
                 <p className="text-xs text-[#8A8A85] mt-0.5 uppercase tracking-[0.12em] font-medium">Products shared</p>
               </div>
             </div>
-            {/* Stat card 2 */}
+            {/* Stat card 3 — Blog posts */}
             <div className="p-[5px] rounded-[1.25rem] bg-[#F5F1E8] border border-[#E8E4DC]">
               <div className="bg-white rounded-[calc(1.25rem_-_5px)] px-5 py-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)] min-w-[160px]">
                 <p className="text-3xl font-serif text-[#18181A] tracking-tight">{allPosts.length}</p>
