@@ -14,6 +14,13 @@ function readingTime(text: string): string {
   return `${mins} min read`
 }
 
+// Neon returns timestamps as JS Date objects, not strings — use toISOString() not String()
+function toDateStr(val: Date | string | null | undefined): string {
+  if (!val) return ''
+  const d = val instanceof Date ? val : new Date(val as string)
+  return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10)
+}
+
 function fsPost(filename: string): PostMeta & { source: 'fs' } {
   const slug = filename.replace(/\.md$/, '')
   const raw = fs.readFileSync(path.join(BLOG_DIR, filename), 'utf8')
@@ -43,7 +50,7 @@ export async function getAllPosts(): Promise<PostMeta[]> {
   const dbPosts: PostMeta[] = dbRows.map(r => ({
     title: r.title,
     description: r.description || '',
-    date: r.published_at ? String(r.published_at).slice(0, 10) : String(r.created_at).slice(0, 10),
+    date: toDateStr(r.published_at ?? r.created_at),
     tags: r.tags || [],
     slug: r.slug,
     readingTime: readingTime(r.content),
@@ -79,7 +86,7 @@ export async function getPostBySlug(slug: string): Promise<{ meta: PostMeta; con
     meta: {
       title: r.title,
       description: r.description || '',
-      date: r.published_at ? String(r.published_at).slice(0, 10) : String(r.created_at).slice(0, 10),
+      date: toDateStr(r.published_at ?? r.created_at),
       tags: r.tags || [],
       slug: r.slug,
       readingTime: readingTime(r.content),

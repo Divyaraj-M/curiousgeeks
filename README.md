@@ -1,6 +1,8 @@
 # Curious Geeks — Full Project Context
 
 > **For any AI assistant starting a new session:** Read this entire file before touching any code. It covers every decision, every gotcha, and every file in the project. Do not guess — the answers are here.
+>
+> **Instruction for AI doing features or fixes:** After completing any feature or bug fix, append an entry to the **Changelog** section at the bottom of this file and push the updated README as part of the same commit. One line per entry: date, what changed, why.
 
 ---
 
@@ -249,6 +251,7 @@ Admin is identified purely by email match: `session.email === 'divyaraj.murugan@
 │   ├── CommentSection.tsx          Client component — review form (stars required) or sign-in prompt
 │   ├── StarRating.tsx              Client component — dual-mode: display (5 filled stars) or input (interactive picker)
 │   ├── LikeButton.tsx              Client component — heart toggle with optimistic update; display-only if no session
+│   ├── TableOfContents.tsx         Client component — sticky TOC with IntersectionObserver; highlights active heading on scroll
 │   ├── ProductCard.tsx             Product card UI — shows like count + avg rating in footer
 │   ├── BlogCard.tsx                Blog card UI
 │   └── Footer.tsx                  Footer with Privacy Policy link
@@ -352,6 +355,9 @@ Wrap the editor div with `data-color-mode="light"` to prevent dark mode flash.
 ### Like toggle is a POST, not PUT/DELETE
 `POST /api/products/[slug]/like` handles both directions — it reads the existing row and either inserts or deletes. The `on conflict do nothing` clause on insert guards against race conditions. The UNIQUE constraint `(product_slug, member_email)` enforces one like per member at the DB level.
 
+### Neon timestamps are JS Date objects — never use `String(date).slice(0,10)`
+`@neondatabase/serverless` returns Postgres `timestamp` and `timestamptz` columns as JS `Date` objects, not strings. `String(new Date()).slice(0,10)` gives `"Thu May 28"` which JavaScript's `Date` constructor parses as year 2001 (or an unpredictable year). Always use `.toISOString().slice(0,10)` to extract `YYYY-MM-DD`. Also: `new Date("YYYY-MM-DD")` is UTC midnight — parse it as local time with `new Date(y, m-1, d)` to avoid off-by-one day shifts in date display.
+
 ### Star rating is required for new reviews, nullable for old
 `comments.rating` is `SMALLINT NULL`. The API enforces `1 ≤ rating ≤ 5` for new submissions. Old comments (pre-feature) have `rating = NULL` and display without a star row in `CommentItem` — no migration needed.
 
@@ -427,3 +433,23 @@ git add -A
 git commit -m "your message"
 git push origin main   # Vercel auto-deploys
 ```
+
+---
+
+## 13. Changelog
+
+> Append one entry per feature or bug fix. Format: `YYYY-MM-DD — What changed — Why / notes`
+
+**2026-05-27** — Initial site launch — Next.js 14, Neon Postgres, email OTP auth, products, comments, blog (fs + DB), deployed to Vercel on curiousgeekspm.com.
+
+**2026-05-28** — Added live member count stat card to homepage hero — alongside product count and blog count.
+
+**2026-05-28** — Built inline blog editor (admin-only) — "Write post" on `/blog`, "Edit post" on `/blog/[slug]`, visible only to `divyaraj.murugan@curiousgeekspm.com`. Uses `@uiw/react-md-editor` with `dynamic({ ssr: false })`. Saves to `blog_posts` table.
+
+**2026-05-28** — Added product likes and review star ratings — `product_likes` table (toggle API at `POST /api/products/[slug]/like`), `rating` column on `comments` (1–5, required for new reviews). `StarRating` (display + input) and `LikeButton` (optimistic) components. Like count + avg rating on product cards and detail page.
+
+**2026-05-28** — Fixed blog post date showing wrong year (2001 instead of 2026) — Root cause: Neon returns `timestamp` columns as JS `Date` objects; `String(dateObj).slice(0,10)` gives `"Thu May 28"` which JS parses as year 2001. Fix: use `.toISOString().slice(0,10)` in `lib/posts.ts`. Also fixed UTC midnight shift in blog post page by parsing `YYYY-MM-DD` in local time.
+
+**2026-05-28** — Added sticky TOC sidebar and related articles to blog post pages — `TableOfContents` client component uses `IntersectionObserver` to highlight active heading. Custom `h1/h2/h3` MDX components add slug IDs. Related articles: posts sharing ≥1 tag with current post, sorted by overlap count, capped at 5. Layout is two-column on `xl:` screens.
+
+**2026-05-28** — Added favicon (`app/icon.svg`) — dark rounded-square with serif "G" in brand orange (`#F26B3A`).
